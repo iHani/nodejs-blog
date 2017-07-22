@@ -1,0 +1,20 @@
+{% include "includes/header.html" %}
+
+<div class="container">
+  <div class="header clearfix">
+    {% include "includes/nav.html" %}
+  </div>
+
+  <div class="jumbotron">
+
+    {% for post in posts %}
+
+    <a href="http://127.0.0.1:3000/post/{{post._id}}"><h3>{{ post.title }}</h3></a>
+    <hr>
+
+    {% endfor %}
+  </div>
+
+</div> <!-- /container -->
+
+{% include "includes/footer.html" %}
