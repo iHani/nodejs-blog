@@ -24,7 +24,7 @@ const env = nunjucks.configure('views', {
   express: app
 });
 
-const database = 'mongodb://localhost:27017/restfultest'
+const database = 'mongodb://localhost:27017/nodejsblog'
 
 MongoClient.connect(database, (err, db) => {
 
@@ -57,6 +57,8 @@ MongoClient.connect(database, (err, db) => {
 
     insertPost(post, db, (post_id) => {
       console.log("Post inserted successfully")
+      console.log(post)
+
       res.redirect('/post/' + post_id)
     })
 
@@ -72,34 +74,115 @@ MongoClient.connect(database, (err, db) => {
     }
 
     let findPost = (pid, db, callback) => {
-      db.collection("posts").find({ _id: new ObjectId(pid) }).toArray((err, result) => {
+      db.collection('posts').find({ _id: new ObjectId(pid) }).toArray((err, result) => {
         assert.equal(err, null)
         callback(result)
       })
     }
 
     findPost(post_id, db, (post) => {
-      let obj = {
+      let doc = {
+        page_title: "Simple blogging app",
         post_id: post[0]._id,
         post_title: post[0].title,
         post_body: post[0].body,
         post_date: post[0].date
       }
-      res.render('post', obj)
+      res.render('post', doc)
     })
 
   }) // get '/post/:post_id'
 
+
+  // displaying a post by its _id
+  router.get('/delete/:post_id', (req, res) => {
+    let post_id = req.params.post_id
+
+    if (post_id == null) {
+      res.status(404).send('Post not found.')
+      return
+    }
+
+    db.collection('posts').deleteOne({ _id: new ObjectId(post_id) }, function(err, obj) {
+      if (err) throw err
+      console.log(`Post ${post_id} was deleted`)
+      res.redirect('/posts/')
+    });
+
+  }) // delete '/post/:post_id'
+
+
+  // editing a post by its _id
+  router.get('/edit/:post_id', (req, res) => {
+    let post_id = req.params.post_id
+
+    if (post_id == null) {
+      res.status(404).send('Post not found.')
+      return
+    }
+
+    let findPost = (pid, db, callback) => {
+      db.collection('posts').find({ _id: new ObjectId(pid) }).toArray((err, result) => {
+        assert.equal(err, null)
+        callback(result)
+      })
+    }
+
+    findPost(post_id, db, (post) => {
+      let doc = {
+        post_id: post[0]._id,
+        post_title: post[0].title,
+        post_body: post[0].body,
+      }
+      res.render('edit_post', doc)
+    })
+
+  }) // get '/edit/:post_id'
+
+
+  // update a post
+  router.post('/update_post/:post_id', (req, res) => {
+    let post_id = req.params.post_id
+
+    if (post_id == null) {
+      res.status(404).send('Post not found.')
+      return
+    }
+
+    let updated = {
+      title: req.body.post_title,
+      body: req.body.post_body,
+      date: new Date()
+    }
+
+    let updatePost = (pid, edited, db, callback) => {
+      db.collection('posts').updateOne({ _id: new ObjectId(pid) }, edited, (err, res) => {
+        if (err) throw err;
+        callback()
+      })
+    }
+
+    updatePost(post_id, updated, db, () => {
+      console.log(`Post ${post_id} updated`);
+      res.redirect('/post/' + post_id)
+    })
+
+  }) // post '/update_post'
+
+
   // displaying all posts
   router.get('/posts', (req, res) => {
     db.collection('posts').find().toArray().then((posts) => {
-      // console.log('Listing all Posts..')
-      // console.log(posts)
+      console.log("Listing all Posts..")
+      console.log(posts)
 
-      res.render('posts', {posts})
+      res.render('posts', {
+        posts,
+        page_title: "Simple blogging app"
+      })
 
     }, (err) => {
-      console.log('Unable to fetch posts', err)
+      console.log("Unable to fetch /posts", err)
     })
 
   }) // get '/posts'
